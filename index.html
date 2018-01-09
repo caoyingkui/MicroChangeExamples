@@ -50,7 +50,10 @@
                     aa.html(r.length);
                     li.on("click", change);
                     //make the tuple line
-                    tuple[t["linetupleid"]] = [t["lines0"].split("\n")[t["leftlinenumber"]-t["linestart0"]],t["lines1"].split("\n")[t["rightlinenumber"]-t["linestart1"]]];
+                    tuple[t["linetupleid"]] = [
+                    t["lines0"].split("\n")[t["leftlinenumber"]-t["linestart0"]].replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                    t["lines1"].split("\n")[t["rightlinenumber"]-t["linestart1"]].replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                    ];
                     //search for nearby same-tupleid records
                     var mp = i - 1;
                     while (mp >= 0 && data1[mp]["linetupleid"] == t["linetupleid"]) {
@@ -89,7 +92,9 @@
         }
     };
     var cal = function(p, s1, s2) {
-        return "<span>" + p.replace(/\n/g, "&nbsp;</span><span>").replace(/ /g, "&nbsp;").replace(/\t/g, "&emsp;") + "</span>";
+        var p1 = p.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        //alert(p1)
+        return "<span>" + p1.replace(/\n/g, "&nbsp;</span><span>").replace(/ /g, "&nbsp;").replace(/\t/g, "&emsp;") + "</span>";
     }
     var change = function() {
         var d = r[parseInt(this.dataset.id) - 1];
@@ -109,7 +114,7 @@
             $.each(mc, function(j, k) {
                 var td = $("<td/>");
                 tr.append(td);
-                td.html(t[k] == null ? "null" : t[k]);
+                td.html(t[k] == null ? "null" : t[k].replace(/</g, "&lt;").replace(/>/g, "&gt;"));
             });
         });
         if (dtm[d["linetupleid"]]) {
@@ -292,7 +297,7 @@
                 <br />
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Tuple</h5>
+                        <h5 class="card-title">Line Pair</h5>
                         <div class="card-text rcode" id="tin"></div>
                     </div>
                 </div>
