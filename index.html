@@ -5,13 +5,13 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <link rel="stylesheet" href="bootstrap.v4.min.css">
     <script src="jquery-1.11.3.js"></script>
-    <script src="source1.js"></script> <!-- must be put first (define NULL=null) -->
+    <script src="microchanges.js"></script> <!-- must be put first (define NULL=null) -->
     <script src="source2.js"></script>
     <script src="list.js"></script>
-    <title>Change Analysis Example</title>
+    <title>Sample Within-Line Code Changes</title>
     <script>
     var repos = [null, "jEdit", "JDTCore", null, "Maven", "Guice"],
-        mc = ["rootentity", "rootelementpart", "whichpartcontext", "changetype", "changecategory", "content"],
+        mc = ["rootentity", "rootelementpart", "whichpartcontext", "changetype", "changecategory", "content", "typechange_annotation", "structureannotation"],
         distiller = ["changeype", "changeentity", "changecontent", "parententity"];
     var stm,
         r,
@@ -313,6 +313,8 @@
                             <th scope="col">ChangeType</th>
                             <th scope="col">Pattern</th>
                             <th scope="col">Content</th>
+                            <th scope="col">TypeAnnot</th>
+                            <th scope="col">PatternAnnot</th>
                         </tr>
                     </thead>
                     <tbody id="mc">
