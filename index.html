@@ -11,7 +11,9 @@
     <title>Sample Within-Line Code Changes</title>
     <script>
     var repos = [null, "jEdit", "JDTCore", null, "Maven", "Guice"],
-        mc = ["rootentity", "rootelementpart", "whichpartcontext", "changetype", "changecategory", "content", "typechange_annotation", "structureannotation"],
+        mc = //["rootentity", "rootelementpart", 
+        ["whichpartcontext", "changetype", "content", "changecategory","typechange_annotation"]
+        //, "structureannotation"],
         distiller = ["changeype", "changeentity", "changecontent", "parententity"];
     var stm,
         r,
@@ -25,6 +27,8 @@
         dtm = {};
         r = [];
         tuple = {};
+        tuplesinhunk = {};
+
         $("#parts").html("");
         if (s[0] != "CHANGE") s[2] = null;
         else s[2] = selectt[s[1]][s[2]];
@@ -34,9 +38,38 @@
             if (t["actiontype"] == s[0] && t["whichpart"] == s[1] && t["changecategory"] == s[2]) {
                 console.log(t);
                 t["changetype"] = t["actiontype"] + " " + t["whichpart"];
-                if (stm[t["linetupleid"]] != null) {
-                    stm[t["linetupleid"]].push(t);
-                } else {
+                
+                //search tuples in the hunk
+                if(tuplesinhunk[t["hunkid"]] == null){
+                    var hunkid = t["hunkid"];
+                    var tupleid = t["linetupleid"];
+                    var tuplecount = 1;
+                    var tp = i - 1;
+
+                    while (tp >= 0 && data1[tp]["hunkid"] == t["hunkid"]) {
+                        if(data1[tp]["linetupleid"] != tupleid){
+                            tuplecount++;
+                            tupleid = data1[tp]["linetupleid"];
+                        }
+                        tp--;
+
+                    }
+                    tp = i + 1;
+                    tupleid = t["linetupleid"];
+                    while (tp < data1.length && data1[tp]["hunkid"] == t["hunkid"]) {
+                        if(data1[tp]["linetupleid"] != tupleid){
+                            tuplecount++;
+                            tupleid = data1[tp]["linetupleid"];
+                        }
+                        tp++;
+                        
+                    }
+                    tuplesinhunk[t["hunkid"]] = [tuplecount];
+                }
+
+
+                if (stm[t["linetupleid"]] == null){
+
                     stm[t["linetupleid"]] = [t];
                     r.push(t);
                     var li = $("<li/>"),
@@ -50,10 +83,31 @@
                     aa.html(r.length);
                     li.on("click", change);
                     //make the tuple line
-                    tuple[t["linetupleid"]] = [
-                    t["lines0"].split("\n")[t["leftlinenumber"]-t["linestart0"]].replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-                    t["lines1"].split("\n")[t["rightlinenumber"]-t["linestart1"]].replace(/</g, "&lt;").replace(/>/g, "&gt;")
-                    ];
+                 //   tuple[t["linetupleid"]] = [
+                //    t["lines0"].split("\n")[t["leftlinenumber"]-t["linestart0"]].replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+                //    t["lines1"].split("\n")[t["rightlinenumber"]-t["linestart1"]].replace(/</g, "&lt;").replace(/>/g, "&gt;")
+                //    ];
+
+                    var tuplelines0 = "";
+                    var leftlinestart = t["beginline_left"];
+                    while(leftlinestart>=t["linestart0"] && leftlinestart<=t["endline_left"]){
+                       // if(tuplelines0.length>0)
+                       //     tuplelines0 = tuplelines0 + "<br/>";
+                        tuplelines0 = tuplelines0 + "<span class='red'>"+t["lines0"].split("\n")[leftlinestart-t["linestart0"]].replace(/</g, "&lt;").replace(/>/g, "&gt;")+"</span>";
+                        leftlinestart++;
+                    }
+                    var tuplelines1 = "";
+                    var rightlinestart = t["beginline_right"];
+                    while(rightlinestart>=t["linestart1"] && rightlinestart<=t["endline_right"]){
+                      //  if(tuplelines1.length>0)
+                      //      tuplelines1 = tuplelines1 + "<br/>";
+                        tuplelines1 = tuplelines1 + "<span class='green'>"+t["lines1"].split("\n")[rightlinestart-t["linestart1"]].replace(/</g, "&lt;").replace(/>/g, "&gt;")+"</span>";
+                        rightlinestart++;
+                    }
+                     tuple[t["linetupleid"]] = [tuplelines0,tuplelines1];
+
+
+
                     //search for nearby same-tupleid records
                     var mp = i - 1;
                     while (mp >= 0 && data1[mp]["linetupleid"] == t["linetupleid"]) {
@@ -103,18 +157,30 @@
         //$("#rt").html("<i>" + repos[d["repoid"]] + "</i> [" + d["rev"] + "] " + d["file_name"] + " (lines <span class='red'>" + d["linestart0"] + "~" + d["lineend0"] + "</span>;<span class='green'>" + d["linestart1"] + "~" + d["lineend1"] + "</span>)");
         $("#rt").html("<i>" + repos[d["repoid"]] + "</i> [" + d["rev"] + "] " + d["file_name"]);
         $("#rin").html(cal(d["precontexts"]) + "<div class='red'>" + cal(d["lines0"]) + "</div><div class='green'>" + cal(d["lines1"]) + "</div>" + cal(d["endcontexts"]));
-        $("#tin").html("<span class='red'>"+tuple[d["linetupleid"]][0]+"</span><span class='green'>"+tuple[d["linetupleid"]][1]+"</span>");
+        
+        //show the line pair when multiple pairs in a hunk
+        if (tuplesinhunk[d["hunkid"]] <=1 ) {
+            $("#linepairdiv").hide();
+        } else {
+            $("#linepairdiv").show();
+        }
+       // $("#tin").html("<span class='red'>"+tuple[d["linetupleid"]][0]+"</span><span class='green'>"+tuple[d["linetupleid"]][1]+"</span>");
+        $("#tin").html(tuple[d["linetupleid"]]);
+        
+        
         $("#mc,#distiller").html("");
         $.each(stm[d["linetupleid"]], function(i, t) {
+
             var tr = $("<tr/>");
             $("#mc").append(tr);
             var td = $("<td/>");
             tr.append(td);
             td.html(i + 1);
             $.each(mc, function(j, k) {
+                
                 var td = $("<td/>");
                 tr.append(td);
-                td.html(t[k] == null ? "null" : t[k].replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+                td.html(t[k] == null ? "null" : t[k].replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />"));
             });
         });
         if (dtm[d["linetupleid"]]) {
@@ -133,6 +199,59 @@
         }
     };
     var select = {},selectt = {};
+    var change1 = function(k){
+        $("#s2,#s3").html("");
+            if (this.value == -1) return;
+            $.each(select[this.value], function(i, t) {
+                var $opt = $("<option/>");
+                $("#s2").append($opt);
+                $opt.val(i);
+                $opt.html(t);
+            });
+            if (this.value == "CHANGE") {
+                /*
+                $.each(patterns, function(i, t) {
+                    var $opt = $("<option/>");
+                    $("#s3").append($opt);
+                    $opt.val(i);
+                    $opt.html(t);
+                });
+                */
+                $.each(selectt[parseInt($("#s2").val())],function(i,t){
+                    var $opt = $("<option/>");
+                    $("#s3").append($opt);
+                    $opt.val(i);
+                    $opt.html(t);
+                });
+            } else {
+                var $opt = $("<option/>");
+                $("#s3").append($opt);
+                $opt.html("NULL");
+            }
+        },
+        change2 = function(){
+            $("#s3").html("");
+            if ($("#s1").val() == "CHANGE") {
+                /*
+                $.each(patterns, function(i, t) {
+                    var $opt = $("<option/>");
+                    $("#s3").append($opt);
+                    $opt.val(i);
+                    $opt.html(t);
+                });
+                */
+                $.each(selectt[this.value],function(i,t){
+                    var $opt = $("<option/>");
+                    $("#s3").append($opt);
+                    $opt.val(i);
+                    $opt.html(t);
+                });
+            } else {
+                var $opt = $("<option/>");
+                $("#s3").append($opt);
+                $opt.html("NULL");
+            }
+        }
     $(function() {
         $.each(actions, function(i, t) {
             if (select[t[0]] == null) {
@@ -162,59 +281,11 @@
             $opt.val(i);
             $opt.html(i);
         });
-        $("#s1").on("change", function(k) {
-            $("#s2,#s3").html("");
-            if (this.value == -1) return;
-            $.each(select[this.value], function(i, t) {
-                var $opt = $("<option/>");
-                $("#s2").append($opt);
-                $opt.val(i);
-                $opt.html(t);
-            });
-            if (this.value == "CHANGE") {
-                /*
-                $.each(patterns, function(i, t) {
-                    var $opt = $("<option/>");
-                    $("#s3").append($opt);
-                    $opt.val(i);
-                    $opt.html(t);
-                });
-                */
-                $.each(selectt[parseInt($("#s2").val())],function(i,t){
-                    var $opt = $("<option/>");
-                    $("#s3").append($opt);
-                    $opt.val(i);
-                    $opt.html(t);
-                });
-            } else {
-                var $opt = $("<option/>");
-                $("#s3").append($opt);
-                $opt.html("NULL");
-            }
-        });
-        $("#s2").on("change",function(){
-            $("#s3").html("");
-            if ($("#s1").val() == "CHANGE") {
-                /*
-                $.each(patterns, function(i, t) {
-                    var $opt = $("<option/>");
-                    $("#s3").append($opt);
-                    $opt.val(i);
-                    $opt.html(t);
-                });
-                */
-                $.each(selectt[this.value],function(i,t){
-                    var $opt = $("<option/>");
-                    $("#s3").append($opt);
-                    $opt.val(i);
-                    $opt.html(t);
-                });
-            } else {
-                var $opt = $("<option/>");
-                $("#s3").append($opt);
-                $opt.html("NULL");
-            }
-        });
+        $("#s1").on("change", change1);
+        $("#s2").on("change",change2);
+        $("#s1").val("ADDITION");
+        change1.call(document.getElementById("s1"));
+        search();
         $("#s1,#s2,#s3").on("change", function() {
             search();
         });
@@ -255,10 +326,10 @@
 
 <body>
     <div class="container">
-        <h2>Example Micro Changes</h2>
+        <h4>Example Micro Changes</h4>
         <div class="row">
             <div class="col-8">
-                <h4>Select Action</h4>
+                <h5>Select ChangeType</h5>
                 <div class="row">
                     <div class="col-4">
                         <select class="form-control" id="s1">
@@ -271,7 +342,7 @@
                 </div>
             </div>
             <div class="col-4">
-                <h4>Select Pattern</h4>
+                <h5>Select Pattern</h5>
                 <p>
                     <select class="form-control" id="s3"></select>
                 </p>
@@ -281,9 +352,9 @@
         <p>
             <button class="btn btn-primary" onclick="search()">Search</button>
         </p>
-        -->
+       
         <hr />
-        <h4>Results: </h4>
+        <h4>Results: </h4> -->
         <div id="result-outer" style="display:none;">
             <ul class="pagination" id="parts">
             </ul>
@@ -295,7 +366,7 @@
                     </div>
                 </div>
                 <br />
-                <div class="card">
+                <div class="card" id="linepairdiv">
                     <div class="card-body">
                         <h5 class="card-title">Line Pair</h5>
                         <div class="card-text rcode" id="tin"></div>
@@ -307,14 +378,16 @@
                     <thead>
                         <tr>
                             <th scope="col">#</th>
-                            <th scope="col">RootEntity</th>
-                            <th scope="col">RootElementPart</th>
+                          <!--  <th scope="col">RootEntity</th>
+                            <th scope="col">RootElement</th>  -->
                             <th scope="col">Context</th>
                             <th scope="col">ChangeType</th>
-                            <th scope="col">Pattern</th>
                             <th scope="col">Content</th>
-                            <th scope="col">TypeAnnot</th>
-                            <th scope="col">PatternAnnot</th>
+                            <th scope="col">Pattern</th>
+                            
+                          <th scope="col" id="th_typeannot">TypeAnnot</th>
+                           <!-- <th scope="col" id = "th_patternannot">PatternAnnot</th>-->
+                        
                         </tr>
                     </thead>
                     <tbody id="mc">
